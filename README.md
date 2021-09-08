@@ -10,3 +10,6 @@ There are some notebooks that show the use of this program.
 * `Verify_DipoleEmissiononThin-Sub.ipynb` another examples of three media interface
 * `AccuracyTestofLeastSquareFitting.ipynb` the programs that try to fit the patterns
 
+## To be done
+- [ ] Check the exact expression of the farfield electric field and patterns
+
