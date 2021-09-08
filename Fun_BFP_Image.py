@@ -392,35 +392,6 @@ def Cal_Pattern(Eplist, epsilon0, mu0, num_layer, ESUp, EPUp, ESDn, EPDn, theta_
 
     return PatternUp, PatternDn,
 
-
-# To calculate the two orthogonal dipole from angle
-# ————————————————————————————————————————————————————————————————————————————————————————————————————————————————
-
-def Cal_Dipole_From_Angle(angle):
-    alpha = angle[0]
-    phi_1 = angle[1]
-    phi_2 = angle[2]
-    # For Dipole 1
-    d1x = np.sin(alpha) * np.cos(phi_1)
-    d1y = np.sin(alpha) * np.sin(phi_1)
-    d1z = np.cos(alpha)
-
-    d2x = -np.cos(phi_2) * np.cos(alpha) * np.cos(phi_1) + \
-        np.sin(phi_2) * np.sin(phi_1)
-
-    d2y = -np.cos(phi_2) * np.cos(alpha) * np.sin(phi_1) - \
-        np.sin(phi_2) * np.cos(phi_1)
-
-    d2z = np.cos(phi_2) * np.sin(alpha)
-
-    p1 = np.array([d1x, d1y, d1z])
-    p2 = np.array([d2x, d2y, d2z])
-
-    return p1, p2
-
-#   To interpolate the original data into another type, I redefined the function so that
-#   the input and output grid are all 2D which is more better for myself to use
-
 # ________________________________________________________________________________________________
 
 

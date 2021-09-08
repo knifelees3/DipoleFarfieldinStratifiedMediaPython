@@ -91,9 +91,6 @@ class BFP_Image_QD:
         # The angle list will be used
         self.theta_Up, self.theta_Dn = 0, 0
 
-        # The clock number
-        self.count = 0
-
 
 # Check the correctness of the initialization
 
@@ -180,75 +177,10 @@ class BFP_Image_QD:
         nPatternDn = PatternDn / np.max(PatternDn)
         return nPatternUp, nPatternDn
 
-# To calculate the dipole orientation when the 2D dipole's angle is given
-    def Cal_Dipole_From_Angle(self, angle):
-        alpha = angle[0]
-        phi_1 = angle[1]
-        phi_2 = angle[2]
-        # For Dipole 1
-        d1x = np.sin(alpha) * np.cos(phi_1)
-        d1y = np.sin(alpha) * np.sin(phi_1)
-        d1z = np.cos(alpha)
-
-        d2x = -np.cos(phi_2) * np.cos(alpha) * np.cos(phi_1) + \
-            np.sin(phi_2) * np.sin(phi_1)
-
-        d2y = -np.cos(phi_2) * np.cos(alpha) * np.sin(phi_1) - \
-            np.sin(phi_2) * np.cos(phi_1)
-
-        d2z = np.cos(phi_2) * np.sin(alpha)
-
-        p1 = np.array([d1x, d1y, d1z])
-        p2 = np.array([d2x, d2y, d2z])
-
-        return p1, p2
 
 # Part II Pattern Function Part
 # ****************************************************************************
 # ____________________________________________________________________________
-    #  Single Pattern Cal with single kx,ky and a given p0
-    def Cal_Pattern_Single_p0(self, kx, ky, p0):
-
-        self.p0 = p0
-
-        klz = np.sqrt(self.kl**2 - kx**2 - ky**2)
-
-        theta_Up = np.arccos(klz[self.num_layer - 1] /
-                             self.kl[self.num_layer - 1])
-        theta_Dn = np.arccos(klz[0] / self.kl[0])
-
-        RSUp, RPUp, RSDn, RPDn, RS12, RP12, RS21, RP21 = self.Cal_RSP(klz)
-
-        GreenSUp, GreenPUp, GreenSDn, GreenPDn = self.Cal_Green(
-            RSUp, RPUp, RSDn, RPDn, RS12, RP12, RS21, RP21, kx, ky, klz)
-
-        ESUp, EPUp, ESDn, EPDn = self.Cal_Elec_Field(
-            GreenSUp, GreenPUp, GreenSDn, GreenPDn)
-
-        PatternUp, PatternDn = self.Cal_Pattern(
-            ESUp, EPUp, ESDn, EPDn, theta_Up, theta_Dn)
-
-        nPatternUp = PatternUp / np.max(PatternUp)
-        nPatternDn = PatternDn / np.max(PatternDn)
-
-        return nPatternUp, nPatternDn
-
-    #  Single Pattern Cal with single kx,ky and a given 2D angle
-
-    def Cal_Pattern_single_QD(self, kx, ky, angle):
-        p1, p2 = self.Cal_Dipole_From_Angle(angle)
-
-        PatternUp1, PatternDn1 = self.Cal_Pattern_Single_p0(kx, ky, p1)
-        PatternUp2, PatternDn2 = self.Cal_Pattern_Single_p0(kx, ky, p2)
-
-        PatternUp = PatternUp1 + PatternUp2
-        PatternDn = PatternDn1 + PatternDn2
-
-        nPatternUp = PatternUp / np.max(PatternUp)
-        nPatternDn = PatternDn / np.max(PatternDn)
-
-        return PatternUp, PatternDn
-
     # _____________________________________________________________________________________________________
     # To calculate the green function for a given kx,ky list which can be used laterly
 
@@ -280,39 +212,6 @@ class BFP_Image_QD:
         print(datetime.datetime.now().strftime(
             '%Y-%m-%d %H:%M:%S') + ': The Green Function Has Been Prepared')
         return 0
-
-    # To calculate the pattern for a given dipole moment where the green function is prepared
-    # -------------------------------------------------------------------------------------------------------------
-    # For a given p1,p2
-    def Cal_PatternUp_List_QD_p1p2(self, p1, p2):
-
-        ESUp1 = np.zeros((self.num_kx, self.num_ky, 3), dtype=complex)
-        EPUp1 = np.zeros((self.num_kx, self.num_ky, 3), dtype=complex)
-        ESUp2 = np.zeros((self.num_kx, self.num_ky, 3), dtype=complex)
-        EPUp2 = np.zeros((self.num_kx, self.num_ky, 3), dtype=complex)
-
-        for l in range(3):
-            ESUp1[:, :, l] = 1j * self.omega * self.mu0 * \
-                (self.GreenSUp[l, 0, :, :] * p1[0] + self.GreenSUp[l,
-                                                                   1, :, :] * p1[1] + self.GreenSUp[l, 2, :, :] * p1[2])
-            EPUp1[:, :, l] = 1j * self.omega * self.mu0 * \
-                (self.GreenPUp[l, 0, :, :] * p1[0] + self.GreenPUp[l,
-                                                                   1, :, :] * p1[1] + self.GreenPUp[l, 2, :, :] * p1[2])
-            ESUp2[:, :, l] = 1j * self.omega * self.mu0 * \
-                (self.GreenSUp[l, 0, :, :] * p2[0] + self.GreenSUp[l,
-                                                                   1, :, :] * p2[1] + self.GreenSUp[l, 2, :, :] * p2[2])
-            EPUp2[:, :, l] = 1j * self.omega * self.mu0 * \
-                (self.GreenPUp[l, 0, :, :] * p2[0] + self.GreenPUp[l,
-                                                                   1, :, :] * p2[1] + self.GreenPUp[l, 2, :, :] * p2[2])
-
-        # Cal the emission pattern
-        PatternS = (np.abs(ESUp1[:, :, 0])**2 + np.abs(ESUp1[:, :, 1])**2 + np.abs(ESUp1[:, :, 2])**2 +
-                    np.abs(ESUp2[:, :, 0])**2 + np.abs(ESUp2[:, :, 1])**2 + np.abs(ESUp2[:, :, 2])**2) * np.abs(np.cos(self.theta_Up[:, :]))**2
-        PatternP = (np.abs(EPUp1[:, :, 0])**2 + np.abs(EPUp1[:, :, 1])**2 + np.abs(EPUp1[:, :, 2])**2 +
-                    np.abs(EPUp2[:, :, 0])**2 + np.abs(EPUp2[:, :, 1])**2 + np.abs(EPUp2[:, :, 2])**2) * np.abs(np.cos(self.theta_Up[:, :]))**2
-        Pattern = PatternS + PatternP
-        nPattern = Pattern / np.max(Pattern)
-        return nPattern
 
 
     # For a given p1
@@ -350,112 +249,7 @@ class BFP_Image_QD:
         nPatternDn = PatternDn
         return nPatternUp,nPatternDn
 
-    # For a given angle
-    def Cal_PatternUp_List_QD_Angle(self, alpha, phi_1, phi_2):
-        angle = [alpha, phi_1, phi_2]
-        p1, p2 = self.Cal_Dipole_From_Angle(angle)
-        Pattern = self.Cal_PatternUp_List_QD_p1p2(p1, p2)
-        nPattern = Pattern / np.max(Pattern)
-        return nPattern
-
-# Part III Fitting Function Part
-# ***********************************************************************
-# ________________________________________________________________________
-    # I use alpha,phi_1,phi_2 here because the parameters should be single rather than array
-
-    # The function used to fit , the function will use "Cal_Pattern_Single_p0" to calculate which
-    # is less efficienct
-    def Cal_Pattern_Single_QD_Fit(self, kxy, alpha, phi_1, phi_2):
-        angle = [alpha, phi_1, phi_2]
-        numk, num_temp = kxy.shape
-        p1, p2 = self.Cal_Dipole_From_Angle(angle)
-
-        PatternUp, PatternDn = np.zeros(numk), np.zeros(numk)
-
-        self.count = self.count + 1
-        print(datetime.datetime.now().strftime(
-            '%Y-%m-%d %H:%M:%S') + ' Iteration Step ', self.count)
-
-        for l in range(numk):
-
-            kx, ky = kxy[l, 0], kxy[l, 1]
-
-            PatternUp1, PatternDn1 = self.Cal_Pattern_Single_p0(kx, ky, p1)
-            PatternUp2, PatternDn2 = self.Cal_Pattern_Single_p0(kx, ky, p2)
-
-            PatternUp[l] = PatternUp1 + PatternUp2
-            PatternDn[l] = PatternDn1 + PatternDn2
-
-        # Normalize the data
-        nPUp = np.abs(PatternUp) / np.max(np.abs(PatternUp))
-        # nPDn = np.abs(PatternDn) / np.max(np.abs(PatternDn))
-
-        # I will use the down direction as the BFP image direction
-        nPUp1d = np.ravel(nPUp)
-        # nPDn1d = np.ravel(nPDn)
-        return nPUp1d
-
-# Fit Function (Less Efficient)
-    def BFP_Curvefit_Single_Angle(self, kxy, Exp_data, angle0, para_bounds):
-        self.count = 0
-        print(datetime.datetime.now().strftime(
-            '%Y-%m-%d %H:%M:%S') + ': Begin To Fit')
-        # perform the fit, making sure to flatten the noisy data for the fit routine
-        fit_params, cov_mat = curve_fit(self.Cal_Pattern_Single_QD_Fit,
-                                        kxy, Exp_data, p0=angle0, bounds=para_bounds)
-
-        # calculate fit parameter errors from covariance matrix
-        fit_errors = np.sqrt(np.diag(cov_mat))
-
-        # manually calculate R-squared goodness of fit
-        fit_residual = Exp_data - \
-            self.Cal_Pattern_Single_QD_Fit(kxy, *fit_params)
-        fit_Rsquared = 1 - np.var(fit_residual) / np.var(Exp_data)
-
-        print('Fit R-squared:', fit_Rsquared, '\n')
-        print('Fit $\alpha$ :', fit_params[0], '\u00b1', fit_errors[0])
-        print('Fit $\phi_1$: ', fit_params[1], '\u00b1', fit_errors[1])
-        print('Fit $\phi_2$: ', fit_params[2], '\u00b1', fit_errors[2])
-
-        return fit_params, fit_errors
-
-    def Cal_Pattern_List_QD_Fit_Angle(self, kxy, alpha, phi_1, phi_2):
-            # Fit Show
-            self.count = self.count + 1
-            print(datetime.datetime.now().strftime(
-                '%Y-%m-%d %H:%M:%S') + ': Iteration Step ', self.count)
-
-            # We will ignore kxy actually
-            Pattern = self.Cal_PatternUp_List_QD_Angle(alpha, phi_2, phi_1)
-            nPattern = Pattern / np.max(Pattern)
-            nPattern1D = np.ravel(nPattern)
-
-            return nPattern1D
-
-    def BFP_Curvefit_List_Angle(self, kxy, Exp_data, angle0, para_bounds):
-
-            print(datetime.datetime.now().strftime(
-                '%Y-%m-%d %H:%M:%S') + ': Begin To Fit')
-            # perform the fit, making sure to flatten the noisy data for the fit routine
-            self.count = 0
-            fit_params, cov_mat = curve_fit(self.Cal_Pattern_List_QD_Fit_Angle,
-                                            kxy, Exp_data, p0=angle0, bounds=para_bounds)
-
-            # calculate fit parameter errors from covariance matrix
-            fit_errors = np.sqrt(np.diag(cov_mat))
-            # manually calculate R-squared goodness of fit
-            fit_residual = Exp_data - \
-                self.Cal_Pattern_List_QD_Fit_Angle(kxy, *fit_params)
-            fit_Rsquared = 1 - np.var(fit_residual) / np.var(Exp_data)
-
-            print('Fit R-squared:', fit_Rsquared, '\n')
-            print('Fit alpha :', fit_params[0], '\u00b1', fit_errors[0])
-            print('Fit phi_1: ', fit_params[1], '\u00b1', fit_errors[1])
-            print('Fit phi_2: ', fit_params[2], '\u00b1', fit_errors[2])
-
-            return fit_params, fit_errors
-
-# Part IV Data Process Part
+# Part III Data Process Part
 # **********************************************************************************************
 # ______________________________________________________________________________________________
 
@@ -484,6 +278,33 @@ class BFP_Image_QD:
 # Part VI The definition of Dipole3D and 3D pattern
 # **********************************************************************************************
 # ______________________________________________________________________________________________
+    def QDDark(self,para):
+        alpha=para[0]
+        phi=para[1]
+        ratio=para[2]
+
+        # For Dipole 1
+        d1x = -np.cos(alpha) * np.cos(phi)
+        d1y = -np.cos(alpha) * np.sin(phi)
+        d1z =  np.sin(alpha)
+
+        # For dipole 2
+        d2x =  np.sin(phi)
+        d2y = -np.cos(phi)
+        d2z =  0
+
+        # For dark axis
+        d3x=np.sin(alpha)*np.cos(phi)
+        d3y=np.sin(alpha)*np.sin(phi)
+        d3z=np.cos(alpha)
+
+        nor=np.sqrt(1**2+1**2+np.abs(ratio)**2)
+        p1 =np.array([d1x, d1y, d1z])/nor
+        p2 = np.array([d2x, d2y, d2z])/nor
+        p3 =np.array([d3x, d3y, d3z])/nor*ratio
+        
+        return p1,p2,p3
+
     def Dipole3D(self,para):
         # The 3D dipole model consists of 3 orthogonal dipoles
         alpha=para[0]
@@ -508,8 +329,37 @@ class BFP_Image_QD:
 
         return d1,d2,d3
 
-    def Pattern3D(self,para):
+    def Pattern3DPara(self,para):
         d1,d2,d3=self.Dipole3D(para)
+        PatternUpd1,PatternDnd1 = self.Cal_Pattern_List_QD_p1(d1)
+        PatternUpd2,PatternDnd2 = self.Cal_Pattern_List_QD_p1(d2)
+        PatternUpd3,PatternDnd3 = self.Cal_Pattern_List_QD_p1(d3)
+        PatternUpd1[np.isnan(PatternUpd1)]=0
+        PatternUpd2[np.isnan(PatternUpd2)]=0
+        PatternUpd3[np.isnan(PatternUpd3)]=0
+        PatternDnd1[np.isnan(PatternDnd1)]=0
+        PatternDnd2[np.isnan(PatternDnd2)]=0
+        PatternDnd3[np.isnan(PatternDnd3)]=0
+        PatternUp=PatternUpd1+PatternUpd2+PatternUpd3
+        PatternDn=PatternDnd1+PatternDnd2+PatternDnd3
+        return PatternUp,PatternDn
+
+    def Pattern2DDarkPara(self,para):
+        d1,d2,d3=self.QDDark(para)
+        PatternUpd1,PatternDnd1 = self.Cal_Pattern_List_QD_p1(d1)
+        PatternUpd2,PatternDnd2 = self.Cal_Pattern_List_QD_p1(d2)
+        PatternUpd3,PatternDnd3 = self.Cal_Pattern_List_QD_p1(d3)
+        PatternUpd1[np.isnan(PatternUpd1)]=0
+        PatternUpd2[np.isnan(PatternUpd2)]=0
+        PatternUpd3[np.isnan(PatternUpd3)]=0
+        PatternDnd1[np.isnan(PatternDnd1)]=0
+        PatternDnd2[np.isnan(PatternDnd2)]=0
+        PatternDnd3[np.isnan(PatternDnd3)]=0
+        PatternUp=PatternUpd1+PatternUpd2+PatternUpd3
+        PatternDn=PatternDnd1+PatternDnd2+PatternDnd3
+        return PatternUp,PatternDn
+
+    def Pattern3D(self,p1,p2,p3):
         PatternUpd1,PatternDnd1 = self.Cal_Pattern_List_QD_p1(d1)
         PatternUpd2,PatternDnd2 = self.Cal_Pattern_List_QD_p1(d2)
         PatternUpd3,PatternDnd3 = self.Cal_Pattern_List_QD_p1(d3)
